@@ -260,7 +260,7 @@ class ProductType:
             "Volume": volumes,
             "Growth Rate": formatted_growth_rates
         }
- 
+    
 class ProductCost:
     """
     Represents the cost structure for a specific type of product.
@@ -287,7 +287,9 @@ class ProductCost:
         """
         total_material_cost = sum(material_cost.calculate_cost() for material_cost in self.material_costs)
         return total_material_cost + self.labor_cost_per_unit + self.overhead_cost_per_unit
-    
+
+
+
   
 
         
@@ -707,7 +709,20 @@ class TravelExpenses:
                 self.calculate_meals_entertainment_total() + self.calculate_ground_transport_total() +
                 self.calculate_miscellaneous_total() + self.calculate_per_diem_total())
     
-        
+
+class ShippingCosts:
+    def __init__(self, item_name, shipping_volume, shipping_rate):
+        self.item_name = item_name
+        self.shipping_volume = shipping_volume
+        self.shipping_rate = shipping_rate
+    
+    def calculate_shipping_costs(self, time_frame):
+        yearly_shipping_costs = []
+        for year in range(time_frame):
+            costs = self.shipping_volume * self.shipping_rate
+            yearly_shipping_costs.append(costs)
+        return yearly_shipping_costs    
+    
 # Example usage
 abc_revenue_model = BaseRevenueModel(time_frame=5)
 time_frame = 5
@@ -822,6 +837,8 @@ travel_expenses = TravelExpenses(
     days_per_trip=3
 )
 
+
+
 # Define different product types
 product_1 = ProductType("Product A", 50, 2000, 0.03)
 product_2 = ProductType("Product B", 80, 1500, 0.05)
@@ -930,6 +947,12 @@ yearly_depreciation = depreciation.calculate_depreciation("straight_line", time_
 # Add Depreciation to SG&A Costs
 sga_cost.add_depreciation(depreciation)
 
+# Initialize shipping items
+shipping_items = [
+    ShippingCosts("Item A", 1000, 1.5),
+    ShippingCosts("Item B", 800, 2.0),
+    # Add more items as needed
+]
 
 
 # Add to the revenue model
@@ -1005,22 +1028,29 @@ consulting_revenue_rows.extend([
 consulting_revenue_rows.insert(0, ["Total Consulting Revenue"] + total_consulting_revenue_per_year)
 
 
-
-# Product Costs Data
+# Product Costs
 product_cost_rows = []
 total_product_cost_per_year = [0] * time_frame
+
 for product, product_cost_structure in zip(product_sales.product_types, product_sales.product_costs):
     yearly_volumes = product.component_details(time_frame)["Volume"]
-    yearly_costs = [product_cost_structure.calculate_total_cost_per_unit() * volume for volume in yearly_volumes]
-    total_product_cost_per_year = [total + cost for total, cost in zip(total_product_cost_per_year, yearly_costs)]
+    yearly_material_costs = []
+    yearly_costs = []  # Define the yearly_costs list here
+
+    for volume in yearly_volumes:
+        total_material_cost_per_year = sum([mc.calculate_cost() * volume for mc in product_cost_structure.material_costs])
+        yearly_material_costs.append(total_material_cost_per_year)
+        total_cost_per_unit = product_cost_structure.calculate_total_cost_per_unit()
+        yearly_costs.append(total_cost_per_unit * volume)  # Calculate yearly costs for each product
 
     product_cost_rows.extend([
         [f"{product.name} Total Cost"] + yearly_costs,
-        [f"  {product.name} Material Cost"] + [mc.calculate_cost() * volume for volume in yearly_volumes for mc in product_cost_structure.material_costs],
+        [f"  {product.name} Material Cost"] + yearly_material_costs,
         [f"  {product.name} Labor Cost"] + [product_cost_structure.labor_cost_per_unit * volume for volume in yearly_volumes],
         [f"  {product.name} Overhead Cost"] + [product_cost_structure.overhead_cost_per_unit * volume for volume in yearly_volumes]
     ])
-product_cost_rows.insert(0, ["Total Product Costs"] + total_product_cost_per_year)
+
+
 
 
 # Subscription Costs Data
@@ -1067,31 +1097,80 @@ building_expense_rows = [
     ["Total Building Expenses"] + annual_building_expenses
 ]
 
+# Travel Expenses Data for DataFrame
+travel_expense_rows = [
+    ["Airfare"] + [travel_expenses.calculate_airfare_total()] * time_frame,
+    ["Accommodation"] + [travel_expenses.calculate_accommodation_total()] * time_frame,
+    ["Meals and Entertainment"] + [travel_expenses.calculate_meals_entertainment_total()] * time_frame,
+    ["Ground Transport"] + [travel_expenses.calculate_ground_transport_total()] * time_frame,
+    ["Miscellaneous"] + [travel_expenses.calculate_miscellaneous_total()] * time_frame,
+    ["Per Diem"] + [travel_expenses.calculate_per_diem_total()] * time_frame,
+    ["Total Travel Expenses"] + [travel_expenses.calculate_total_travel_expenses()] * time_frame
+]
 
-# Column headers
-columns = ['Attribute'] + [f'Year {i + 1}' for i in range(time_frame)]
+# Marketing Expenses Data for DataFrame
+marketing_expense_rows = [
+    ["Campaign Budget"] + [marketing_expenses.calculate_campaign_budget()] * time_frame,
+    ["Events Budget"] + [marketing_expenses.calculate_events_budget()] * time_frame,
+    ["PR Budget"] + [marketing_expenses.calculate_pr_budget()] * time_frame,
+    ["Social Media Budget"] + [marketing_expenses.calculate_social_media_budget()] * time_frame,
+    ["Content Budget"] + [marketing_expenses.calculate_content_budget()] * time_frame,
+    ["SEO Budget"] + [marketing_expenses.calculate_seo_budget()] * time_frame,
+    ["Staff and Agency Fees"] + [marketing_expenses.calculate_staff_and_agency_fees()] * time_frame,
+    ["Total Marketing Expenses"] + [marketing_expenses.calculate_total_marketing_expenses()] * time_frame
+]
+
+# Calculate total shipping costs and create data rows
+shipping_cost_rows = [["Total Shipping Costs"]]
+total_shipping_cost_per_year = [0] * time_frame
+
+for item in shipping_items:
+    item_costs = item.calculate_shipping_costs(time_frame)
+    total_shipping_cost_per_year = [total + cost for total, cost in zip(total_shipping_cost_per_year, item_costs)]
+
+    # Add item details to the rows
+    shipping_cost_rows.extend([
+        [f"  {item.item_name} Volume"] + [item.shipping_volume] * time_frame,
+        [f"  {item.item_name} Rate"] + [item.shipping_rate] * time_frame,
+        [f"  {item.item_name} Cost"] + item_costs
+    ])
+
+# Add the total costs to the first row
+shipping_cost_rows[0] += total_shipping_cost_per_year
 
 
 def format_with_commas(x):
+  
     if isinstance(x, (int, float)):
-        return "{:,g}".format(x)
+        return "{:,.2f}".format(x)
     return x
 
+# Column headers
+columns = ['Attribute'] + [f'Year {i + 1}' for i in range(time_frame)]
 
 # Convert rows to DataFrames
 
 
 df_product_revenue = pd.DataFrame(product_revenue_rows, columns=columns)
 formatted_df_product_revenue = df_product_revenue.applymap(format_with_commas)
-print(formatted_df_product_revenue.to_string(index=False)) 
+print(formatted_df_product_revenue.to_string(index=False))
 
 df_subscription_revenue = pd.DataFrame(subscription_revenue_rows, columns=columns)
 formatted_df_subscription_revenue = df_subscription_revenue.applymap(format_with_commas)
 print(formatted_df_subscription_revenue.to_string(index=False))
 
-df_consulting_revenue = pd.DataFrame(consulting_revenue_rows, columns=columns)
-formatted_df_consulting_revenue = df_consulting_revenue.applymap(format_with_commas)
-print(formatted_df_consulting_revenue.to_string(index=False))
+# Convert rows to DataFrame
+df_product_costs = pd.DataFrame(product_cost_rows, columns=columns)
+
+# Apply formatting
+formatted_df_product_costs = df_product_costs.applymap(format_with_commas)
+
+# Display the DataFrame
+print(formatted_df_product_costs.to_string(index=False))
+
+df_product_costs = pd.DataFrame(product_cost_rows, columns = columns)
+formatted_df_product_costs = df_product_costs.applymap(format_with_commas)
+print(formatted_df_product_costs.to_string(index=False))
 
 df_subscription_costs = pd.DataFrame(subscription_cost_rows, columns=columns)
 formatted_df_subscription_costs = df_subscription_costs.applymap(format_with_commas)
@@ -1118,41 +1197,27 @@ formatted_df_building_expenses = df_building_expenses.applymap(format_with_comma
 # Display the DataFrame
 print(formatted_df_building_expenses.to_string(index=False))
 
-# Marketing Expenses Data for DataFrame
-marketing_expense_rows = [
-    ["Campaign Budget"] + [marketing_expenses.calculate_campaign_budget()] * time_frame,
-    ["Events Budget"] + [marketing_expenses.calculate_events_budget()] * time_frame,
-    ["PR Budget"] + [marketing_expenses.calculate_pr_budget()] * time_frame,
-    ["Social Media Budget"] + [marketing_expenses.calculate_social_media_budget()] * time_frame,
-    ["Content Budget"] + [marketing_expenses.calculate_content_budget()] * time_frame,
-    ["SEO Budget"] + [marketing_expenses.calculate_seo_budget()] * time_frame,
-    ["Staff and Agency Fees"] + [marketing_expenses.calculate_staff_and_agency_fees()] * time_frame,
-    ["Total Marketing Expenses"] + [marketing_expenses.calculate_total_marketing_expenses()] * time_frame
-]
+
 
 # Convert marketing expense rows to DataFrame
-columns = ['Attribute'] + [f'Year {i + 1}' for i in range(time_frame)]
+
 df_marketing_expenses = pd.DataFrame(marketing_expense_rows, columns=columns)
 formatted_df_marketing_expenses = df_marketing_expenses.applymap(format_with_commas)
 
 # Display the DataFrame
 print(formatted_df_marketing_expenses.to_string(index=False))
 
-# Travel Expenses Data for DataFrame
-travel_expense_rows = [
-    ["Airfare"] + [travel_expenses.calculate_airfare_total()] * time_frame,
-    ["Accommodation"] + [travel_expenses.calculate_accommodation_total()] * time_frame,
-    ["Meals and Entertainment"] + [travel_expenses.calculate_meals_entertainment_total()] * time_frame,
-    ["Ground Transport"] + [travel_expenses.calculate_ground_transport_total()] * time_frame,
-    ["Miscellaneous"] + [travel_expenses.calculate_miscellaneous_total()] * time_frame,
-    ["Per Diem"] + [travel_expenses.calculate_per_diem_total()] * time_frame,
-    ["Total Travel Expenses"] + [travel_expenses.calculate_total_travel_expenses()] * time_frame
-]
 
-columns = ['Attribute'] + [f'Year {i + 1}' for i in range(time_frame)]
+# Convert travel expense rows to DataFrame
+
 df_travel_expenses = pd.DataFrame(travel_expense_rows, columns=columns)
 formatted_df_travel_expenses = df_travel_expenses.applymap(format_with_commas)
 
 # Display the DataFrame
 print(formatted_df_travel_expenses.to_string(index=False))
 
+
+# Convert shipping costs rows to  DataFrame and apply formatting
+df_shipping_costs = pd.DataFrame(shipping_cost_rows, columns=columns)
+formatted_df_shipping_costs = df_shipping_costs.applymap(format_with_commas)
+print(formatted_df_shipping_costs.to_string(index=False))
