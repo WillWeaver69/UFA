@@ -25,7 +25,8 @@ class BaseRevenueModel:
             revenue_type (object): An instance of a revenue type class.
         """
         self.revenue_components.append(revenue_type)
-        
+
+            
     
     def add_sga_costs(self, sga_costs):
         self.sga_costs = sga_costs
@@ -34,6 +35,7 @@ class BaseRevenueModel:
     def calculate_overall_costs(self, time_frame):
         # Assuming other costs calculation methods are defined
         sga_costs = self.sga_costs.calculate_total_sga_costs(time_frame)
+        
         # Combine with other costs...
         return combined_costs
 
@@ -554,6 +556,10 @@ class EmployeeType:
         adjusted_cost_per_employee = self.cost_per_employee * (1 + self.compensation_growth_rate) ** year
         return adjusted_employee_count * adjusted_cost_per_employee
     
+    def calculate_number_of_employees(self, year):
+        return int(self.employee_count * (1 + self.employee_growth_rate) ** year)    
+
+    
     
 class CompensationCost:
     def __init__(self):
@@ -562,6 +568,12 @@ class CompensationCost:
     def add_employee_type(self, employee_type):
         self.employee_types.append(employee_type)
 
+    def calculate_total_employees(self, time_frame):
+        total_employees_per_year = [0] * time_frame
+        for year in range(time_frame):
+            total_employees_per_year[year] = sum([employee.calculate_number_of_employees(year) for employee in self.employee_types])
+        return total_employees_per_year        
+ 
     def calculate_total_compensation(self, time_frame):
         total_compensation = [0] * time_frame
         for year in range(time_frame):
@@ -722,6 +734,30 @@ class ShippingCosts:
             costs = self.shipping_volume * self.shipping_rate
             yearly_shipping_costs.append(costs)
         return yearly_shipping_costs    
+
+
+
+    def _format_to_dataframe(self, rows, time_frame):
+        columns = ['Attribute'] + [f'Year {i + 1}' for i in range(time_frame)]
+        df = pd.DataFrame(rows, columns=columns)
+        return df.applymap(format_value)
+
+
+class SuppliesCost:
+    def __init__(self, total_employees_by_year, tech_supplies, office_supplies):
+        self.total_employees_by_year = total_employees_by_year
+        self.tech_supplies = tech_supplies
+        self.office_supplies = office_supplies
+
+    def calculate_tech_supply_costs(self, year=None):
+        # Adjusting the year to be 0-based for list indexing
+        employees = self.total_employees_by_year if year is None else self.total_employees_by_year[year - 1]
+        return employees * self.tech_supplies
+    
+    def calculate_office_supply_costs(self, year=None):
+        # Similar adjustment as tech supplies
+        employees = self.total_employees_by_year if year is None else self.total_employees_by_year[year - 1]
+        return employees * self.office_supplies    
     
 # Example usage
 abc_revenue_model = BaseRevenueModel(time_frame=5)
@@ -954,6 +990,27 @@ shipping_items = [
     # Add more items as needed
 ]
 
+total_employees_by_year = compensation_cost.calculate_total_employees(time_frame)
+
+
+supply_expenses = SuppliesCost(
+    total_employees_by_year = total_employees_by_year,
+    tech_supplies = 500,
+    office_supplies = 200
+)
+
+# Generate a list of years (e.g., [1, 2, 3, 4, 5] for a time frame of 5 years)
+years = list(range(1, time_frame + 1))
+
+# Calculate supply costs for each year
+tech_costs = [supply_expenses.calculate_tech_supply_costs(year) for year in years]
+office_costs = [supply_expenses.calculate_office_supply_costs(year) for year in years]
+
+# Supplies expenses data for DataFrame
+supply_cost_rows = [
+    ["Tech Supply Costs"] + tech_costs,
+    ["Office Supply Costs"] + office_costs
+]
 
 # Add to the revenue model
 abc_revenue_model.add_revenue_type(product_sales)
@@ -1221,3 +1278,12 @@ print(formatted_df_travel_expenses.to_string(index=False))
 df_shipping_costs = pd.DataFrame(shipping_cost_rows, columns=columns)
 formatted_df_shipping_costs = df_shipping_costs.applymap(format_with_commas)
 print(formatted_df_shipping_costs.to_string(index=False))
+
+
+# Define columns for DataFrame
+columns = ["Attribute"] + ["Year " + str(year) for year in years]
+df_supply_costs = pd.DataFrame(supply_cost_rows, columns=columns)
+formatted_df_supply_costs = df_supply_costs.applymap(format_with_commas)
+
+# Display the DataFrame
+print(formatted_df_supply_costs.to_string(index=False))
