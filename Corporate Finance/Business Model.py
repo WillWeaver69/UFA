@@ -758,6 +758,16 @@ class SuppliesCost:
         # Similar adjustment as tech supplies
         employees = self.total_employees_by_year if year is None else self.total_employees_by_year[year - 1]
         return employees * self.office_supplies    
+
+class SystemsCost:
+    def __init__(self, total_employees_by_year, system_cost_per_employee):
+        self.total_employees_by_year = total_employees_by_year
+        self.system_cost_per_employee = system_cost_per_employee
+    
+    def calculate_total_systems_cost(self, year):
+        # Use the year index to get the correct number of employees for that year
+        employees = self.total_employees_by_year[year - 1]
+        return employees * self.system_cost_per_employee    
     
 # Example usage
 abc_revenue_model = BaseRevenueModel(time_frame=5)
@@ -1195,6 +1205,20 @@ for item in shipping_items:
 # Add the total costs to the first row
 shipping_cost_rows[0] += total_shipping_cost_per_year
 
+# Initialize the SystemsCost object
+systems_costs = SystemsCost(
+    total_employees_by_year=total_employees_by_year,
+    system_cost_per_employee=500
+)
+
+# Calculate the systems costs by year
+total_systems_costs = [systems_costs.calculate_total_systems_cost(year) for year in years]
+
+# Systems costs expenses for DataFrame
+system_cost_rows = [
+    ["Systems Cost"] + total_systems_costs
+]
+
 
 def format_with_commas(x):
   
@@ -1287,3 +1311,8 @@ formatted_df_supply_costs = df_supply_costs.applymap(format_with_commas)
 
 # Display the DataFrame
 print(formatted_df_supply_costs.to_string(index=False))
+
+# Create, format and print a DataFrame for systems costs
+df_systems_costs = pd.DataFrame(system_cost_rows, columns=["Attribute"] + [f'Year {i}' for i in years])
+formatted_df_systems_costs = df_systems_costs.applymap(format_with_commas)
+print(formatted_df_systems_costs.to_string(index=False))
