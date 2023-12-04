@@ -769,6 +769,36 @@ class SystemsCost:
         employees = self.total_employees_by_year[year - 1]
         return employees * self.system_cost_per_employee    
     
+class ProfessionalServices:
+    def __init__(self, hourly_legal, hourly_audit, hourly_tax, hourly_other, legal_hours, audit_hours, tax_hours, other_hours):
+        self.hourly_legal = hourly_legal
+        self.hourly_audit = hourly_audit
+        self.hourly_tax = hourly_tax
+        self.hourly_other = hourly_other
+        self.legal_hours = legal_hours
+        self.audit_hours = audit_hours
+        self.tax_hours = tax_hours
+        self.other_hours = other_hours
+        
+    def calculate_legal_costs(self):
+        return self.hourly_legal * self.hourly_other
+    
+    def calculate_audit_costs(self):
+        return self.hourly_audit * self.audit_hours
+    
+    def calculate_tax_costs(self):
+        return self.hourly_tax * self.tax_hours
+    
+    def calculate_other_costs(self):
+        return self.hourly_other * self.other_hours
+    
+    def calculate_total_proserv_costs(self):
+        return (self.calculate_legal_costs() + self.calculate_audit_costs() + self.calculate_tax_costs() + self.calculate_other_costs())    
+    
+
+    
+    
+    
 # Example usage
 abc_revenue_model = BaseRevenueModel(time_frame=5)
 time_frame = 5
@@ -883,7 +913,17 @@ travel_expenses = TravelExpenses(
     days_per_trip=3
 )
 
-
+#Create a Professional Services Object    
+proserv_costs = ProfessionalServices(
+    hourly_legal = 500,
+    hourly_audit = 300,
+    hourly_tax = 350,
+    hourly_other = 150,
+    legal_hours = 100,
+    audit_hours = 50,
+    tax_hours = 50,
+    other_hours = 500
+)
 
 # Define different product types
 product_1 = ProductType("Product A", 50, 2000, 0.03)
@@ -1219,6 +1259,15 @@ system_cost_rows = [
     ["Systems Cost"] + total_systems_costs
 ]
 
+#Professional services expenses for dataframe
+
+proserv_rows = [
+    ["Legal"] + [proserv_costs.calculate_legal_costs()] * time_frame,
+    ["Audit"] + [proserv_costs.calculate_audit_costs()] * time_frame,
+    ["Tax"] + [proserv_costs.calculate_tax_costs()] * time_frame,
+    ["Other Professional Services"] + [proserv_costs.calculate_other_costs()] * time_frame,
+    ["Total Professional Service Costs"] + [proserv_costs.calculate_total_proserv_costs()] * time_frame
+]
 
 def format_with_commas(x):
   
@@ -1316,3 +1365,9 @@ print(formatted_df_supply_costs.to_string(index=False))
 df_systems_costs = pd.DataFrame(system_cost_rows, columns=["Attribute"] + [f'Year {i}' for i in years])
 formatted_df_systems_costs = df_systems_costs.applymap(format_with_commas)
 print(formatted_df_systems_costs.to_string(index=False))
+
+#Create a Dataframe with proserv costs and print
+
+df_proserv_costs = pd.DataFrame(proserv_rows, columns=columns)
+formatted_proserv_costs = df_proserv_costs.applymap(format_with_commas)
+print(formatted_proserv_costs.to_string(index = False))
