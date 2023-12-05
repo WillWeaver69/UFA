@@ -1,3 +1,4 @@
+
 import pandas as pd
 
 class BaseRevenueModel:
@@ -838,6 +839,20 @@ class TaxAndInsuranceExpenses:
     def calculate_total_tax_insurance_expenses(self):
         return self.calculate_total_sales_tax() + self.calculate_total_insurance_premiums()
     
+class MiscellaneousExpenses:
+    def __init__(self, expenses):
+        """
+        expenses: a dictionary where each key is the type of expense and the value is the cost of that expense.
+        Example: {'office_supplies': 200, 'travel': 500, 'marketing': 1000}
+        """
+        self.expenses = expenses
+
+    def calculate_expense_total_for_type(self, expense_type):
+        return self.expenses.get(expense_type, 0)
+
+    def calculate_total_miscellaneous_expenses(self):
+        return sum(self.expenses.values())
+
     
     
 # Example usage
@@ -984,6 +999,18 @@ tax_insurance_expenses = TaxAndInsuranceExpenses(
     total_sales=10000,    # Total sales amount
     insurance_premiums=insurance_premiums
 )
+
+
+# Example miscellaneous expenses
+misc_expenses = {
+    'Item1': 200,
+    'Item2': 500,
+    'Item3': 1000
+}
+
+# Create an instance of misc expenses class
+misc_expenses_obj = MiscellaneousExpenses(misc_expenses)
+
 # Define different product types
 product_1 = ProductType("Product A", 50, 2000, 0.03)
 product_2 = ProductType("Product B", 80, 1500, 0.05)
@@ -1349,6 +1376,13 @@ tax_insurance_expense_rows.append(
     ["Total Tax and Insurance Expenses"] + [tax_insurance_expenses.calculate_total_tax_insurance_expenses()] * time_frame
 )
 
+# Create dataframe rows for misc expenses
+misc_expense_rows = []
+for expense_type, cost in misc_expenses.items():
+    misc_expense_rows.append([expense_type.title()] + [cost] * time_frame)
+misc_expense_rows.append(["Total Miscellaneous Expenses"] + [total_misc_expenses] * time_frame)
+
+
 
 def format_with_commas(x):
   
@@ -1464,3 +1498,11 @@ df_tax_insurance_expenses = pd.DataFrame(tax_insurance_expense_rows, columns=col
 formatted_df_tax_insurance_expenses = df_tax_insurance_expenses.applymap(format_with_commas)
 
 print(formatted_df_tax_insurance_expenses.to_string(index=False))
+
+
+# Create DataFrame and format and print for misc expenses
+
+df_misc_expenses = pd.DataFrame(misc_expense_rows, columns=columns)
+formatted_df_misc_expenses = df_misc_expenses.applymap(format_with_commas)
+print(formatted_df_misc_expenses.to_string(index=False))
+    
