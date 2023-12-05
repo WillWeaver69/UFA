@@ -808,6 +808,35 @@ class Subscriptions:
         
     def calculate_employee_subscription_costs(self):
         return self.employee_subscription_cost * self.num_employees
+
+class TaxAndInsuranceExpenses:
+    def __init__(self, sales_tax_allocations, total_sales, insurance_premiums):
+        """
+        sales_tax_allocations: a dictionary where each key is a tax regime and the value is a tuple (portion_of_sales, tax_rate).
+        Example: {'local': (0.5, 0.05), 'federal': (0.5, 0.08)}
+        
+        insurance_premiums: a dictionary where each key is the insurance type and the value is the annual premium.
+        Example: {'property': 500, 'liability': 300}
+        """
+        self.sales_tax_allocations = sales_tax_allocations
+        self.total_sales = total_sales
+        self.insurance_premiums = insurance_premiums
+
+    def calculate_sales_tax_for_regime(self, regime):
+        portion_of_sales, tax_rate = self.sales_tax_allocations[regime]
+        return portion_of_sales * self.total_sales * tax_rate
+
+    def calculate_total_sales_tax(self):
+        total_tax = 0
+        for regime in self.sales_tax_allocations:
+            total_tax += self.calculate_sales_tax_for_regime(regime)
+        return total_tax
+
+    def calculate_total_insurance_premiums(self):
+        return sum(self.insurance_premiums.values())
+
+    def calculate_total_tax_insurance_expenses(self):
+        return self.calculate_total_sales_tax() + self.calculate_total_insurance_premiums()
     
     
     
@@ -946,6 +975,15 @@ sub_costs = Subscriptions(
     num_employees = 10
 )
 
+# Example usage for tax and insurance
+sales_tax_allocations = {'local': (0.5, 0.05), 'federal': (0.5, 0.08)}  # Allocating 50% of sales to local and federal taxes with respective rates
+insurance_premiums = {'property': 500, 'liability': 300}
+
+tax_insurance_expenses = TaxAndInsuranceExpenses(
+    sales_tax_allocations=sales_tax_allocations,
+    total_sales=10000,    # Total sales amount
+    insurance_premiums=insurance_premiums
+)
 # Define different product types
 product_1 = ProductType("Product A", 50, 2000, 0.03)
 product_2 = ProductType("Product B", 80, 1500, 0.05)
@@ -1297,6 +1335,20 @@ sub_cost_rows = [
     ["Employee Subscriptions Costs"] + [sub_costs.calculate_employee_subscription_costs()] * time_frame
 ]
 
+# Create rows for DataFrame
+tax_insurance_expense_rows = []
+for regime in sales_tax_allocations:
+    tax_insurance_expense_rows.append(
+        [f"{regime.title()} Sales Tax"] + [tax_insurance_expenses.calculate_sales_tax_for_regime(regime)] * time_frame
+    )
+for insurance_type in insurance_premiums:
+    tax_insurance_expense_rows.append(
+        [f"{insurance_type.title()} Insurance"] + [insurance_premiums[insurance_type]] * time_frame
+    )
+tax_insurance_expense_rows.append(
+    ["Total Tax and Insurance Expenses"] + [tax_insurance_expenses.calculate_total_tax_insurance_expenses()] * time_frame
+)
+
 
 def format_with_commas(x):
   
@@ -1405,3 +1457,10 @@ print(formatted_proserv_costs.to_string(index = False))
 #Create,format and print DF for sub costs
 df_sub_costs = pd.DataFrame(sub_cost_rows, columns = columns)
 formatted_df_sub_costs = df_sub_costs.applymap(format_with_commas)
+print(formatted_df_sub_costs.to_string(index = False)) 
+
+# Convert tax and insurance costs to DataFrame and format and print
+df_tax_insurance_expenses = pd.DataFrame(tax_insurance_expense_rows, columns=columns)
+formatted_df_tax_insurance_expenses = df_tax_insurance_expenses.applymap(format_with_commas)
+
+print(formatted_df_tax_insurance_expenses.to_string(index=False))
