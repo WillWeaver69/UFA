@@ -796,6 +796,18 @@ class ProfessionalServices:
         return (self.calculate_legal_costs() + self.calculate_audit_costs() + self.calculate_tax_costs() + self.calculate_other_costs())    
     
 
+class Subscriptions:
+    def __init__(self, corporate_subscription_cost, num_corporate_subscriptions, employee_subscription_cost, num_employees):
+        self.corporate_subscription_cost = corporate_subscription_cost
+        self.num_corporate_subscriptions = num_corporate_subscriptions
+        self.employee_subscription_cost = employee_subscription_cost 
+        self.num_employees = num_employees
+        
+    def calculate_corporate_subscription_costs(self):
+        return self.corporate_subscription_cost * self.num_corporate_subscriptions
+        
+    def calculate_employee_subscription_costs(self):
+        return self.employee_subscription_cost * self.num_employees
     
     
     
@@ -923,6 +935,15 @@ proserv_costs = ProfessionalServices(
     audit_hours = 50,
     tax_hours = 50,
     other_hours = 500
+)
+
+#Initialise a subscriptions object with hypothetical values
+
+sub_costs = Subscriptions(
+    corporate_subscription_cost = 500,
+    num_corporate_subscriptions = 3,
+    employee_subscription_cost = 150,
+    num_employees = 10
 )
 
 # Define different product types
@@ -1269,6 +1290,14 @@ proserv_rows = [
     ["Total Professional Service Costs"] + [proserv_costs.calculate_total_proserv_costs()] * time_frame
 ]
 
+#Put sub costs in a list for use in dataframe
+
+sub_cost_rows = [
+    ["Corporate Subscription Costs"] + [sub_costs.calculate_corporate_subscription_costs()] * time_frame,
+    ["Employee Subscriptions Costs"] + [sub_costs.calculate_employee_subscription_costs()] * time_frame
+]
+
+
 def format_with_commas(x):
   
     if isinstance(x, (int, float)):
@@ -1371,3 +1400,8 @@ print(formatted_df_systems_costs.to_string(index=False))
 df_proserv_costs = pd.DataFrame(proserv_rows, columns=columns)
 formatted_proserv_costs = df_proserv_costs.applymap(format_with_commas)
 print(formatted_proserv_costs.to_string(index = False))
+
+
+#Create,format and print DF for sub costs
+df_sub_costs = pd.DataFrame(sub_cost_rows, columns = columns)
+formatted_df_sub_costs = df_sub_costs.applymap(format_with_commas)
