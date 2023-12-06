@@ -1,6 +1,8 @@
 
 import pandas as pd
 
+import numpy as np
+
 class BaseRevenueModel:
     """
     Attributes:
@@ -758,7 +760,19 @@ class SuppliesCost:
     def calculate_office_supply_costs(self, year=None):
         # Similar adjustment as tech supplies
         employees = self.total_employees_by_year if year is None else self.total_employees_by_year[year - 1]
-        return employees * self.office_supplies    
+        return employees * self.office_supplies
+    
+    def calculate_total_supply_costs(self):
+        total_supply_costs = []
+        for year in range(len(self.total_employees_by_year)):
+            tech_cost = self.calculate_tech_supply_costs(year + 1)
+            office_cost = self.calculate_office_supply_costs(year + 1)
+            total_cost_for_year = tech_cost + office_cost
+            total_supply_costs.append(total_cost_for_year)
+        return total_supply_costs
+
+        
+    
 
 class SystemsCost:
     def __init__(self, total_employees_by_year, system_cost_per_employee):
@@ -809,6 +823,9 @@ class Subscriptions:
         
     def calculate_employee_subscription_costs(self):
         return self.employee_subscription_cost * self.num_employees
+    
+    def calculate_total_susbcription_costs(self):
+        return self.calculate_corporate_subscription_costs() + self.calculate_employee_subscription_costs()
 
 class TaxAndInsuranceExpenses:
     def __init__(self, sales_tax_allocations, total_sales, insurance_premiums):
@@ -1141,11 +1158,14 @@ years = list(range(1, time_frame + 1))
 # Calculate supply costs for each year
 tech_costs = [supply_expenses.calculate_tech_supply_costs(year) for year in years]
 office_costs = [supply_expenses.calculate_office_supply_costs(year) for year in years]
+total_supply_costs = supply_expenses.calculate_total_supply_costs()
+
 
 # Supplies expenses data for DataFrame
 supply_cost_rows = [
     ["Tech Supply Costs"] + tech_costs,
-    ["Office Supply Costs"] + office_costs
+    ["Office Supply Costs"] + office_costs,
+    ["Total Supply Costs"] + total_supply_costs
 ]
 
 # Add to the revenue model
@@ -1359,8 +1379,11 @@ proserv_rows = [
 
 sub_cost_rows = [
     ["Corporate Subscription Costs"] + [sub_costs.calculate_corporate_subscription_costs()] * time_frame,
-    ["Employee Subscriptions Costs"] + [sub_costs.calculate_employee_subscription_costs()] * time_frame
+    ["Employee Subscriptions Costs"] + [sub_costs.calculate_employee_subscription_costs()] * time_frame,
+    ["Total Subscriptions Costs"] + [sub_costs.calculate_total_susbcription_costs()] * time_frame
+    
 ]
+
 
 # Create rows for DataFrame
 tax_insurance_expense_rows = []
@@ -1382,7 +1405,19 @@ for expense_type, cost in misc_expenses.items():
     misc_expense_rows.append([expense_type.title()] + [cost] * time_frame)
 misc_expense_rows.append(["Total Miscellaneous Expenses"] + [total_misc_expenses] * time_frame)
 
-
+SGA_expense_rows = [
+    ["Compensation"] + compensation_cost.calculate_total_compensation(time_frame),
+    ["Building"] + annual_building_expenses,
+    ["Depreciation"] + yearly_depreciation,
+    ["T&E"] + [travel_expenses.calculate_total_travel_expenses()] * time_frame,
+    ["Professional Services"] + [proserv_costs.calculate_total_proserv_costs()] * time_frame,
+    ["Marketing"] + [marketing_expenses.calculate_total_marketing_expenses()] * time_frame,
+    ["Tax & Insurance"] + [tax_insurance_expenses.calculate_total_tax_insurance_expenses()] * time_frame,
+    ["Supplies"] + supply_expenses.calculate_total_supply_costs(),
+    ["Systems"] + total_systems_costs,
+    ["Subscriptions"] + [sub_costs.calculate_total_susbcription_costs()] * time_frame,
+    ["Miscellaneous"] + [total_misc_expenses] * time_frame
+]
 
 def format_with_commas(x):
   
@@ -1505,4 +1540,24 @@ print(formatted_df_tax_insurance_expenses.to_string(index=False))
 df_misc_expenses = pd.DataFrame(misc_expense_rows, columns=columns)
 formatted_df_misc_expenses = df_misc_expenses.applymap(format_with_commas)
 print(formatted_df_misc_expenses.to_string(index=False))
-    
+
+
+# Convert SG&A ros to DataFrame and format
+df_SGA_expenses = pd.DataFrame(SGA_expense_rows, columns=columns)
+formatted_df_SGA_expenses = df_SGA_expenses.applymap(format_with_commas)
+
+
+# Calculate the sum of each numeric column
+sums = df_SGA_expenses.select_dtypes(np.number).sum()
+
+# Create a new row with 'Total' as the first column and the sums in the other columns
+total_row = ['Total SG&A Expenses'] + sums.tolist()
+
+# Append this row to DataFrame
+df_SGA_expenses.loc[len(df_SGA_expenses)] = total_row
+
+# Format the DataFrame
+formatted_df_SGA_expenses = df_SGA_expenses.applymap(format_with_commas)
+
+# Display the DataFrame
+print(formatted_df_SGA_expenses.to_string(index=False))
